@@ -35,9 +35,10 @@ export const config = {
     password: process.env.REDIS_PASSWORD,
   },
   
-  // Database (para uso futuro)
+  // Database
   database: {
     url: process.env.DATABASE_URL,
+    path: process.env.DATABASE_PATH,
   },
 } as const;
 

@@ -10,6 +10,7 @@ import { config } from './config/environment';
 import { requestLogger } from './shared/middlewares/requestLogger';
 import { errorHandler } from './shared/middlewares/errorHandler';
 import { notFoundHandler } from './shared/middlewares/notFoundHandler';
+import { registerModule as registerIntentManager } from './presentation/module';
 
 /**
  * Cria e configura a aplicação Express
@@ -48,8 +49,8 @@ function createApp(): Application {
 
   // ========================================
   // Load Modules Here
-  // TODO: Adicionar carregamento de módulos quando necessário
   // ========================================
+  registerIntentManager(app);
 
   // ========================================
   // Error Handlers (must be last)

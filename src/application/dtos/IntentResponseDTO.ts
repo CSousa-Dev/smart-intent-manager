@@ -13,6 +13,7 @@ export interface IntentResponseDTO {
   synonyms: string[];
   examplePhrases: string[];
   isDefault: boolean;
+  tenantIds: string[]; // Lista de tenantIds vinculados à intent
   createdAt: string;
   updatedAt?: string;
 }

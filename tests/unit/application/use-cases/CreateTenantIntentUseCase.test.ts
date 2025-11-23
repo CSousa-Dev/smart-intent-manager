@@ -45,7 +45,7 @@ describe('CreateTenantIntentUseCase', () => {
 
   it('should create a tenant intent successfully', async () => {
     const dto = {
-      tenantId: 'tenant-001',
+      tenantIds: ['tenant-001'],
       label: 'greeting',
       description: 'Greeting intent',
       status: IntentStatus.ACTIVE,
@@ -82,20 +82,61 @@ describe('CreateTenantIntentUseCase', () => {
     );
   });
 
-  it('should throw error when tenantId is missing', async () => {
+  it('should create a tenant intent with multiple tenantIds successfully', async () => {
     const dto = {
-      tenantId: '',
+      tenantIds: ['tenant-001', 'tenant-002'],
+      label: 'greeting',
+      description: 'Greeting intent',
+      status: IntentStatus.ACTIVE,
+    };
+
+    tenantService.exists.mockResolvedValue(true);
+    intentRepository.findByLabel.mockResolvedValue(null);
+
+    const mockIntent = Intent.createForCreation(
+      'intent-id',
+      dto.label,
+      dto.description,
+      dto.status,
+      [],
+      [],
+      false
+    );
+
+    intentRepository.create.mockResolvedValue(mockIntent);
+    intentRepository.linkIntentToTenant.mockResolvedValue();
+
+    const result = await useCase.execute(dto);
+
+    expect(result).toBeInstanceOf(Intent);
+    expect(intentRepository.linkIntentToTenant).toHaveBeenCalledTimes(2);
+  });
+
+  it('should throw error when tenantIds is missing', async () => {
+    const dto = {
+      tenantIds: [],
       label: 'greeting',
       description: 'Description',
       status: IntentStatus.ACTIVE,
-    };
+    } as any;
+
+    await expect(useCase.execute(dto)).rejects.toThrow(AppError);
+  });
+
+  it('should throw error when tenantIds is not an array', async () => {
+    const dto = {
+      tenantIds: 'tenant-001',
+      label: 'greeting',
+      description: 'Description',
+      status: IntentStatus.ACTIVE,
+    } as any;
 
     await expect(useCase.execute(dto)).rejects.toThrow(AppError);
   });
 
   it('should throw error when tenant does not exist', async () => {
     const dto = {
-      tenantId: 'non-existent-tenant',
+      tenantIds: ['non-existent-tenant'],
       label: 'greeting',
       description: 'Description',
       status: IntentStatus.ACTIVE,
@@ -107,9 +148,23 @@ describe('CreateTenantIntentUseCase', () => {
     expect(intentRepository.create).not.toHaveBeenCalled();
   });
 
+  it('should throw error when one tenant does not exist in multiple tenantIds', async () => {
+    const dto = {
+      tenantIds: ['tenant-001', 'non-existent-tenant'],
+      label: 'greeting',
+      description: 'Description',
+      status: IntentStatus.ACTIVE,
+    };
+
+    tenantService.exists.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+
+    await expect(useCase.execute(dto)).rejects.toThrow(AppError);
+    expect(intentRepository.create).not.toHaveBeenCalled();
+  });
+
   it('should throw error when intent already exists', async () => {
     const dto = {
-      tenantId: 'tenant-001',
+      tenantIds: ['tenant-001'],
       label: 'greeting',
       description: 'Description',
       status: IntentStatus.ACTIVE,
@@ -121,6 +176,36 @@ describe('CreateTenantIntentUseCase', () => {
 
     await expect(useCase.execute(dto)).rejects.toThrow(AppError);
     expect(intentRepository.create).not.toHaveBeenCalled();
+  });
+
+  it('should remove duplicate tenantIds', async () => {
+    const dto = {
+      tenantIds: ['tenant-001', 'tenant-001', 'tenant-002'],
+      label: 'greeting',
+      description: 'Description',
+      status: IntentStatus.ACTIVE,
+    };
+
+    tenantService.exists.mockResolvedValue(true);
+    intentRepository.findByLabel.mockResolvedValue(null);
+
+    const mockIntent = Intent.createForCreation(
+      'intent-id',
+      dto.label,
+      dto.description,
+      dto.status,
+      [],
+      [],
+      false
+    );
+
+    intentRepository.create.mockResolvedValue(mockIntent);
+    intentRepository.linkIntentToTenant.mockResolvedValue();
+
+    await useCase.execute(dto);
+
+    // Deve vincular apenas 2 vezes (tenant-001 e tenant-002), não 3
+    expect(intentRepository.linkIntentToTenant).toHaveBeenCalledTimes(2);
   });
 });
 

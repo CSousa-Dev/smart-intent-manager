@@ -42,7 +42,7 @@ export const config = {
   
   // External Services
   tenantService: {
-    url: process.env.TENANT_SERVICE_URL || 'http://localhost:3001/api/tenant',
+    url: process.env.TENANT_SERVICE_URL || 'http://localhost:3020/api/tenants',
   },
 } as const;
 

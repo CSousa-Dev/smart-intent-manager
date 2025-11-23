@@ -270,6 +270,15 @@ export class SQLiteIntentRepository implements IIntentRepository {
     return new Set(rows.map((row) => row.intent_id));
   }
 
+  async getTenantIdsForIntent(intentId: string): Promise<string[]> {
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      SELECT tenant_id FROM tenant_intents WHERE intent_id = ?
+    `);
+    const rows = stmt.all(intentId) as Array<{ tenant_id: string }>;
+    return rows.map((row) => row.tenant_id);
+  }
+
   private mapRowToIntent(row: IntentRow): Intent {
     let synonyms: string[] = [];
     let examplePhrases: string[] = [];

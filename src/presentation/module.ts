@@ -35,7 +35,7 @@ export function registerModule(app: Application): void {
   const createDefaultIntentUseCase = new CreateDefaultIntentUseCase(repository);
   const createTenantIntentUseCase = new CreateTenantIntentUseCase(repository, tenantService);
   const getIntentUseCase = new GetIntentUseCase(repository);
-  const updateIntentUseCase = new UpdateIntentUseCase(repository);
+  const updateIntentUseCase = new UpdateIntentUseCase(repository, tenantService);
   const deleteIntentUseCase = new DeleteIntentUseCase(repository);
   const listTenantIntentsUseCase = new ListTenantIntentsUseCase(repository);
   const listAllIntentsUseCase = new ListAllIntentsUseCase(repository);
@@ -54,7 +54,8 @@ export function registerModule(app: Application): void {
     listAllIntentsUseCase,
     listAllDefaultIntentsUseCase,
     linkIntentToTenantUseCase,
-    excludeIntentFromTenantUseCase
+    excludeIntentFromTenantUseCase,
+    repository
   );
 
   // Configura controller nas rotas

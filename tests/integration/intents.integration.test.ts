@@ -16,15 +16,20 @@ jest.mock('../../src/infrastructure/services/TenantApiService', () => {
     TenantApiService: jest.fn().mockImplementation(() => {
       return {
         findById: jest.fn().mockImplementation(async (id: TenantId) => {
-          // Simula que tenant-001 existe
-          if (id.getValue() === 'tenant-001') {
+          // Simula que tenant-001 e tenant-002 existem
+          const tenantIdValue = id.getValue();
+          if (tenantIdValue === 'tenant-001') {
             return Tenant.reconstitute('tenant-001', 'Tenant 001');
+          }
+          if (tenantIdValue === 'tenant-002') {
+            return Tenant.reconstitute('tenant-002', 'Tenant 002');
           }
           return null;
         }),
         exists: jest.fn().mockImplementation(async (id: TenantId) => {
-          // Simula que tenant-001 existe
-          return id.getValue() === 'tenant-001';
+          // Simula que tenant-001 e tenant-002 existem
+          const tenantIdValue = id.getValue();
+          return tenantIdValue === 'tenant-001' || tenantIdValue === 'tenant-002';
         }),
       };
     }),
@@ -135,7 +140,7 @@ describe('Intents API Integration Tests', () => {
       const response = await request(app)
         .post('/api/intent/tenant')
         .send({
-          tenantId: 'tenant-001',
+          tenantIds: ['tenant-001'],
           label: 'tenant-greeting',
           description: 'Tenant greeting intent',
           status: 'ACTIVE',
@@ -146,15 +151,47 @@ describe('Intents API Integration Tests', () => {
       expect(response.body.data.id).toBeDefined();
       expect(response.body.data.label).toBe('tenant-greeting');
       expect(response.body.data.isDefault).toBe(false);
+      expect(response.body.data.tenantIds).toEqual(['tenant-001']);
 
       createdTenantIntentId = response.body.data.id;
+    });
+
+    it('should create a tenant intent with multiple tenantIds', async () => {
+      const response = await request(app)
+        .post('/api/intent/tenant')
+        .send({
+          tenantIds: ['tenant-001', 'tenant-002'],
+          label: 'multi-tenant-intent',
+          description: 'Intent for multiple tenants',
+          status: 'ACTIVE',
+        })
+        .expect(201);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.tenantIds).toHaveLength(2);
+      expect(response.body.data.tenantIds).toContain('tenant-001');
+      expect(response.body.data.tenantIds).toContain('tenant-002');
+    });
+
+    it('should return error when tenantIds is empty', async () => {
+      const response = await request(app)
+        .post('/api/intent/tenant')
+        .send({
+          tenantIds: [],
+          label: 'greeting',
+          description: 'Description',
+          status: 'ACTIVE',
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
     });
 
     it('should return error when tenant does not exist', async () => {
       const response = await request(app)
         .post('/api/intent/tenant')
         .send({
-          tenantId: 'non-existent-tenant',
+          tenantIds: ['non-existent-tenant'],
           label: 'greeting',
           description: 'Description',
           status: 'ACTIVE',
@@ -180,7 +217,7 @@ describe('Intents API Integration Tests', () => {
       await request(app)
         .post('/api/intent/tenant')
         .send({
-          tenantId: 'tenant-001',
+          tenantIds: ['tenant-001'],
           label: 'tenant-greeting',
           description: 'Tenant greeting',
           status: 'ACTIVE',
@@ -213,7 +250,7 @@ describe('Intents API Integration Tests', () => {
       await request(app)
         .post('/api/intent/tenant')
         .send({
-          tenantId: 'tenant-001',
+          tenantIds: ['tenant-001'],
           label: 'greeting-2',
           description: 'Greeting 2',
           status: 'SUGGESTED',

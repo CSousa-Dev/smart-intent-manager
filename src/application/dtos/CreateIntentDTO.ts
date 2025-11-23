@@ -14,7 +14,7 @@ export interface CreateDefaultIntentDTO {
 }
 
 export interface CreateTenantIntentDTO {
-  tenantId: string;
+  tenantIds: string[]; // Array de tenantIds para vincular a intent
   label: string;
   description: string;
   status: IntentStatus;

@@ -11,4 +11,5 @@ export interface UpdateIntentDTO {
   status?: IntentStatus;
   synonyms?: string[];
   examplePhrases?: string[];
+  tenantIds?: string[]; // Lista de tenantIds para atualizar os vínculos
 }

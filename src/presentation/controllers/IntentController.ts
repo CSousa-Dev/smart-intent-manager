@@ -26,6 +26,7 @@ import { Intent } from '../../domain/entities/Intent';
 import { IntentStatus, isValidIntentStatus } from '../../domain/value-objects/IntentStatus';
 import { AppError } from '../../shared/utils/AppError';
 import { successResponse, errorResponse } from '../../shared/types/ApiResponse';
+import { IIntentRepository } from '../../domain/repositories/IIntentRepository';
 
 export class IntentController {
   constructor(
@@ -38,7 +39,8 @@ export class IntentController {
     private readonly listAllIntentsUseCase: ListAllIntentsUseCase,
     private readonly listAllDefaultIntentsUseCase: ListAllDefaultIntentsUseCase,
     private readonly linkIntentToTenantUseCase: LinkIntentToTenantUseCase,
-    private readonly excludeIntentFromTenantUseCase: ExcludeIntentFromTenantUseCase
+    private readonly excludeIntentFromTenantUseCase: ExcludeIntentFromTenantUseCase,
+    private readonly intentRepository: IIntentRepository
   ) {}
 
   async createDefaultIntent(req: Request, res: Response): Promise<void> {
@@ -46,7 +48,7 @@ export class IntentController {
       const dto = this.validateCreateDefaultIntentDTO(req.body);
       const intent = await this.createDefaultIntentUseCase.execute(dto);
 
-      const responseData: IntentResponseDTO = this.mapIntentToResponseDTO(intent);
+      const responseData: IntentResponseDTO = await this.mapIntentToResponseDTO(intent);
 
       res.status(201).json(successResponse(responseData));
     } catch (error) {
@@ -59,7 +61,7 @@ export class IntentController {
       const dto = this.validateCreateTenantIntentDTO(req.body);
       const intent = await this.createTenantIntentUseCase.execute(dto);
 
-      const responseData: IntentResponseDTO = this.mapIntentToResponseDTO(intent);
+      const responseData: IntentResponseDTO = await this.mapIntentToResponseDTO(intent);
 
       res.status(201).json(successResponse(responseData));
     } catch (error) {
@@ -75,7 +77,7 @@ export class IntentController {
 
       const intent = await this.getIntentUseCase.execute(req.params.id);
 
-      const responseData: IntentResponseDTO = this.mapIntentToResponseDTO(intent, true);
+      const responseData: IntentResponseDTO = await this.mapIntentToResponseDTO(intent, true);
 
       res.status(200).json(successResponse(responseData));
     } catch (error) {
@@ -92,7 +94,7 @@ export class IntentController {
       const dto = this.validateUpdateIntentDTO(req.body);
       const intent = await this.updateIntentUseCase.execute(req.params.id, dto);
 
-      const responseData: IntentResponseDTO = this.mapIntentToResponseDTO(intent, true);
+      const responseData: IntentResponseDTO = await this.mapIntentToResponseDTO(intent, true);
 
       res.status(200).json(successResponse(responseData));
     } catch (error) {
@@ -125,7 +127,7 @@ export class IntentController {
       const intents = await this.listTenantIntentsUseCase.execute(tenantId);
 
       const responseData: ListIntentsResponseDTO = {
-        items: intents.map((intent) => this.mapIntentToResponseDTO(intent, true)),
+        items: await Promise.all(intents.map((intent) => this.mapIntentToResponseDTO(intent, true))),
         total: intents.length,
       };
 
@@ -140,7 +142,7 @@ export class IntentController {
       const intents = await this.listAllIntentsUseCase.execute();
 
       const responseData: ListIntentsResponseDTO = {
-        items: intents.map((intent) => this.mapIntentToResponseDTO(intent, true)),
+        items: await Promise.all(intents.map((intent) => this.mapIntentToResponseDTO(intent, true))),
         total: intents.length,
       };
 
@@ -155,7 +157,7 @@ export class IntentController {
       const intents = await this.listAllDefaultIntentsUseCase.execute();
 
       const responseData: ListIntentsResponseDTO = {
-        items: intents.map((intent) => this.mapIntentToResponseDTO(intent, true)),
+        items: await Promise.all(intents.map((intent) => this.mapIntentToResponseDTO(intent, true))),
         total: intents.length,
       };
 
@@ -195,7 +197,10 @@ export class IntentController {
     }
   }
 
-  private mapIntentToResponseDTO(intent: Intent, includeUpdatedAt = false): IntentResponseDTO {
+  private async mapIntentToResponseDTO(intent: Intent, includeUpdatedAt = false): Promise<IntentResponseDTO> {
+    // Busca os tenantIds vinculados à intent
+    const tenantIds = await this.intentRepository.getTenantIdsForIntent(intent.id);
+
     return {
       id: intent.id,
       label: intent.label,
@@ -204,6 +209,7 @@ export class IntentController {
       synonyms: intent.synonyms || [],
       examplePhrases: intent.examplePhrases || [],
       isDefault: intent.isDefault,
+      tenantIds: tenantIds,
       createdAt: intent.createdAt.toISOString(),
       ...(includeUpdatedAt && { updatedAt: intent.updatedAt.toISOString() }),
     };
@@ -255,9 +261,18 @@ export class IntentController {
 
     const dto = body as Partial<CreateTenantIntentDTO>;
 
-    if (!dto.tenantId || typeof dto.tenantId !== 'string' || dto.tenantId.trim().length === 0) {
-      throw AppError.badRequest('tenantId is required and must be a non-empty string');
+    // Valida tenantIds (array)
+    if (!dto.tenantIds || !Array.isArray(dto.tenantIds) || dto.tenantIds.length === 0) {
+      throw AppError.badRequest('tenantIds is required and must be a non-empty array');
     }
+
+    // Valida cada tenantId no array
+    const tenantIds = dto.tenantIds.map((id, index) => {
+      if (!id || typeof id !== 'string' || id.trim().length === 0) {
+        throw AppError.badRequest(`tenantIds[${index}] must be a non-empty string`);
+      }
+      return id.trim();
+    });
 
     if (!dto.label || typeof dto.label !== 'string' || dto.label.trim().length === 0) {
       throw AppError.badRequest('label is required and must be a non-empty string');
@@ -283,7 +298,7 @@ export class IntentController {
     const examplePhrases = this.validateStringArray(dto.examplePhrases, 'examplePhrases');
 
     return {
-      tenantId: dto.tenantId.trim(),
+      tenantIds: tenantIds,
       label: dto.label.trim(),
       description: dto.description || '',
       status: dto.status as IntentStatus,
@@ -345,6 +360,22 @@ export class IntentController {
       if (validated !== undefined) {
         result.examplePhrases = validated;
       }
+    }
+
+    if (dto.tenantIds !== undefined) {
+      if (!Array.isArray(dto.tenantIds)) {
+        throw AppError.badRequest('tenantIds must be an array');
+      }
+
+      // Valida cada tenantId no array
+      const tenantIds = dto.tenantIds.map((id, index) => {
+        if (!id || typeof id !== 'string' || id.trim().length === 0) {
+          throw AppError.badRequest(`tenantIds[${index}] must be a non-empty string`);
+        }
+        return id.trim();
+      });
+
+      result.tenantIds = tenantIds;
     }
 
     return result;

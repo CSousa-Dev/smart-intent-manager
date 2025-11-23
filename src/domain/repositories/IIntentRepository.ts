@@ -32,4 +32,7 @@ export interface IIntentRepository {
   // Buscar IDs vinculados/excluídos para um tenant
   getLinkedIntentIds(tenantId: TenantId): Promise<Set<string>>;
   getExcludedIntentIds(tenantId: TenantId): Promise<Set<string>>;
+  
+  // Buscar tenantIds vinculados a uma intent
+  getTenantIdsForIntent(intentId: string): Promise<string[]>;
 }

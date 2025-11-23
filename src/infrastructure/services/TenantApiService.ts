@@ -31,9 +31,22 @@ export class TenantApiService implements ITenantService {
         throw new Error(`Failed to fetch tenant: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as {
+        success: boolean;
+        data?: {
+          id: string;
+          name: string;
+        };
+      };
 
+      // Formato da resposta: { success: true, data: { id: string, name: string } }
       if (!data.success || !data.data) {
+        return null;
+      }
+
+      // Garante que temos id e name
+      if (!data.data.id || !data.data.name) {
+        logger.warn(`Invalid tenant data format for ${id.getValue()}:`, data);
         return null;
       }
 

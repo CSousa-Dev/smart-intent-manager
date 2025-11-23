@@ -23,23 +23,36 @@ export class CreateTenantIntentUseCase {
 
   async execute(dto: CreateTenantIntentDTO): Promise<Intent> {
     // Validações de aplicação (não de negócio)
-    if (!dto.tenantId || dto.tenantId.trim().length === 0) {
-      throw AppError.badRequest('tenantId is required');
+    if (!dto.tenantIds || !Array.isArray(dto.tenantIds) || dto.tenantIds.length === 0) {
+      throw AppError.badRequest('tenantIds is required and must be a non-empty array');
     }
 
-    const tenantId = TenantId.create(dto.tenantId);
-
-    try {
-      // Regra de negócio: Verifica se o tenant existe antes de criar intent não-default
-      await IntentTenantValidationService.ensureTenantExistsForNonDefaultIntent(
-        this.tenantService,
-        tenantId
-      );
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('does not exist')) {
-        throw AppError.notFound(error.message);
+    // Valida e cria TenantIds
+    const tenantIds = dto.tenantIds.map((id) => {
+      if (!id || typeof id !== 'string' || id.trim().length === 0) {
+        throw AppError.badRequest('All tenantIds must be non-empty strings');
       }
-      throw error;
+      return TenantId.create(id.trim());
+    });
+
+    // Remove duplicatas
+    const uniqueTenantIds = Array.from(
+      new Map(tenantIds.map((id) => [id.getValue(), id])).values()
+    );
+
+    // Valida existência de todos os tenants
+    for (const tenantId of uniqueTenantIds) {
+      try {
+        await IntentTenantValidationService.ensureTenantExistsForNonDefaultIntent(
+          this.tenantService,
+          tenantId
+        );
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('does not exist')) {
+          throw AppError.notFound(error.message);
+        }
+        throw error;
+      }
     }
 
     try {
@@ -66,12 +79,14 @@ export class CreateTenantIntentUseCase {
 
     const createdIntent = await this.intentRepository.create(intent);
 
-    // Regra de negócio: Vincula ao tenant usando serviço de domínio
-    await IntentTenantRelationshipService.linkIntentToTenant(
-      this.intentRepository,
-      createdIntent.id,
-      tenantId
-    );
+    // Regra de negócio: Vincula a intent a todos os tenants usando serviço de domínio
+    for (const tenantId of uniqueTenantIds) {
+      await IntentTenantRelationshipService.linkIntentToTenant(
+        this.intentRepository,
+        createdIntent.id,
+        tenantId
+      );
+    }
 
     return createdIntent;
   }

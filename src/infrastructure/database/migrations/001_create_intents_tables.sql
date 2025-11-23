@@ -1,0 +1,45 @@
+-- Migration: Create intents tables with many-to-many relationship
+-- Description: Creates intents table, client_intents junction table, and exclusions table
+
+-- Tabela principal de intents
+CREATE TABLE IF NOT EXISTS intents (
+  id TEXT PRIMARY KEY,
+  label TEXT NOT NULL UNIQUE,
+  description TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL CHECK(status IN ('ACTIVE', 'INACTIVE', 'SUGGESTED')),
+  synonyms TEXT,  -- JSON array: ["marcar", "agendar", "horário"]
+  example_phrases TEXT,  -- JSON array: ["Quero marcar um horário", "Posso agendar?"]
+  is_default BOOLEAN NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+-- Tabela de relacionamento many-to-many (clientes <-> intents específicos)
+CREATE TABLE IF NOT EXISTS client_intents (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL,
+  intent_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(client_id, intent_id),
+  FOREIGN KEY (intent_id) REFERENCES intents(id) ON DELETE CASCADE
+);
+
+-- Tabela de exclusões (clientes que não devem ver intents default)
+CREATE TABLE IF NOT EXISTS client_intent_exclusions (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL,
+  intent_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(client_id, intent_id),
+  FOREIGN KEY (intent_id) REFERENCES intents(id) ON DELETE CASCADE
+);
+
+-- Índices para performance
+CREATE INDEX IF NOT EXISTS idx_intents_status ON intents(status);
+CREATE INDEX IF NOT EXISTS idx_intents_is_default ON intents(is_default);
+CREATE INDEX IF NOT EXISTS idx_intents_label ON intents(label);
+CREATE INDEX IF NOT EXISTS idx_client_intents_client_id ON client_intents(client_id);
+CREATE INDEX IF NOT EXISTS idx_client_intents_intent_id ON client_intents(intent_id);
+CREATE INDEX IF NOT EXISTS idx_exclusions_client_id ON client_intent_exclusions(client_id);
+CREATE INDEX IF NOT EXISTS idx_exclusions_intent_id ON client_intent_exclusions(intent_id);
+

@@ -5,7 +5,6 @@
 import { GetIntentUseCase } from '../../../../src/application/use-cases/GetIntentUseCase';
 import { IIntentRepository } from '../../../../src/domain/repositories/IIntentRepository';
 import { Intent } from '../../../../src/domain/entities/Intent';
-import { ClientId } from '../../../../src/domain/value-objects/ClientId';
 import { IntentStatus } from '../../../../src/domain/value-objects/IntentStatus';
 import { AppError } from '../../../../src/shared/utils/AppError';
 
@@ -17,11 +16,20 @@ describe('GetIntentUseCase', () => {
     repository = {
       create: jest.fn(),
       findById: jest.fn(),
-      findByClientAndLabel: jest.fn(),
-      findAllByClient: jest.fn(),
+      findByLabel: jest.fn(),
       findAll: jest.fn(),
+      findAllDefault: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      linkIntentToClient: jest.fn(),
+      unlinkIntentFromClient: jest.fn(),
+      excludeIntentFromClient: jest.fn(),
+      removeExclusion: jest.fn(),
+      findIntentsByClient: jest.fn(),
+      isIntentLinkedToClient: jest.fn(),
+      isIntentExcludedFromClient: jest.fn(),
+      getLinkedIntentIds: jest.fn(),
+      getExcludedIntentIds: jest.fn(),
     } as any;
 
     useCase = new GetIntentUseCase(repository);
@@ -29,13 +37,7 @@ describe('GetIntentUseCase', () => {
 
   it('should get an intent by id successfully', async () => {
     const intentId = 'intent-id';
-    const mockIntent = Intent.create(
-      intentId,
-      ClientId.create('client-001'),
-      'greeting',
-      'Description',
-      IntentStatus.ACTIVE
-    );
+    const mockIntent = Intent.create(intentId, 'greeting', 'Description', IntentStatus.ACTIVE);
 
     repository.findById.mockResolvedValue(mockIntent);
 
@@ -63,4 +65,3 @@ describe('GetIntentUseCase', () => {
     expect(repository.findById).not.toHaveBeenCalled();
   });
 });
-

@@ -5,9 +5,10 @@
 
 import { IIntentRepository } from '../../domain/repositories/IIntentRepository';
 import { Intent } from '../../domain/entities/Intent';
-import { IntentStatus, isValidIntentStatus } from '../../domain/value-objects/IntentStatus';
+import { IntentStatus } from '../../domain/value-objects/IntentStatus';
 import { UpdateIntentDTO } from '../dtos/UpdateIntentDTO';
 import { AppError } from '../../shared/utils/AppError';
+import { IntentValidator } from '../../domain/services/IntentValidator';
 
 export class UpdateIntentUseCase {
   constructor(private readonly repository: IIntentRepository) {}
@@ -25,36 +26,41 @@ export class UpdateIntentUseCase {
     }
 
     // Valida status se fornecido
-    if (dto.status !== undefined && !isValidIntentStatus(dto.status)) {
-      throw AppError.badRequest('status must be ACTIVE, INACTIVE, or SUGGESTED');
+    if (dto.status !== undefined) {
+      IntentValidator.validateStatus(dto.status);
     }
 
     // Se está atualizando o label, verifica unicidade
     if (dto.label !== undefined && dto.label !== existingIntent.label) {
-      const existingWithLabel = await this.repository.findByClientAndLabel(
-        existingIntent.clientId,
-        dto.label.trim()
-      );
+      IntentValidator.validateLabel(dto.label);
+
+      const existingWithLabel = await this.repository.findByLabel(dto.label.trim());
 
       if (existingWithLabel && existingWithLabel.id !== id) {
-        throw AppError.conflict(
-          `Intent with label "${dto.label}" already exists for clientId: ${existingIntent.clientId.getValue()}`
-        );
+        throw AppError.conflict(`Intent with label "${dto.label}" already exists`);
       }
     }
 
-    // Atualiza a intenção
-    let updatedIntent = existingIntent;
+    // Valida arrays se fornecidos
+    const synonyms =
+      dto.synonyms !== undefined
+        ? IntentValidator.validateSynonyms(dto.synonyms)
+        : existingIntent.synonyms;
 
-    if (dto.label !== undefined || dto.description !== undefined || dto.status !== undefined) {
-      updatedIntent = updatedIntent.update(
-        dto.label !== undefined ? dto.label : updatedIntent.label,
-        dto.description !== undefined ? dto.description : updatedIntent.description,
-        dto.status !== undefined ? dto.status : updatedIntent.status
-      );
-    }
+    const examplePhrases =
+      dto.examplePhrases !== undefined
+        ? IntentValidator.validateExamplePhrases(dto.examplePhrases)
+        : existingIntent.examplePhrases;
+
+    // Atualiza a intenção
+    const updatedIntent = existingIntent.update(
+      dto.label !== undefined ? dto.label : existingIntent.label,
+      dto.description !== undefined ? dto.description : existingIntent.description,
+      dto.status !== undefined ? dto.status : existingIntent.status,
+      synonyms,
+      examplePhrases
+    );
 
     return await this.repository.update(updatedIntent);
   }
 }
-

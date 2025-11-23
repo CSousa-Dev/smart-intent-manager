@@ -3,45 +3,70 @@
  * Entidade principal que representa uma intenção
  */
 
-import { ClientId } from '../value-objects/ClientId';
 import { IntentStatus } from '../value-objects/IntentStatus';
 
 export class Intent {
   private constructor(
     public readonly id: string,
-    public readonly clientId: ClientId,
     public readonly label: string,
     public readonly description: string,
     public readonly status: IntentStatus,
+    public readonly synonyms: string[],
+    public readonly examplePhrases: string[],
+    public readonly isDefault: boolean,
     public readonly createdAt: Date,
     public readonly updatedAt: Date
   ) {}
 
   static create(
     id: string,
-    clientId: ClientId,
     label: string,
     description: string,
-    status: IntentStatus
+    status: IntentStatus,
+    synonyms: string[] = [],
+    examplePhrases: string[] = [],
+    isDefault: boolean = false
   ): Intent {
     if (!label || label.trim().length === 0) {
       throw new Error('Label cannot be empty');
     }
 
     const now = new Date();
-    return new Intent(id, clientId, label.trim(), description || '', status, now, now);
+    return new Intent(
+      id,
+      label.trim(),
+      description || '',
+      status,
+      synonyms || [],
+      examplePhrases || [],
+      isDefault,
+      now,
+      now
+    );
   }
 
   static reconstitute(
     id: string,
-    clientId: ClientId,
     label: string,
     description: string,
     status: IntentStatus,
+    synonyms: string[],
+    examplePhrases: string[],
+    isDefault: boolean,
     createdAt: Date,
     updatedAt: Date
   ): Intent {
-    return new Intent(id, clientId, label, description, status, createdAt, updatedAt);
+    return new Intent(
+      id,
+      label,
+      description,
+      status,
+      synonyms || [],
+      examplePhrases || [],
+      isDefault,
+      createdAt,
+      updatedAt
+    );
   }
 
   updateLabel(newLabel: string): Intent {
@@ -51,10 +76,12 @@ export class Intent {
 
     return Intent.reconstitute(
       this.id,
-      this.clientId,
       newLabel.trim(),
       this.description,
       this.status,
+      this.synonyms,
+      this.examplePhrases,
+      this.isDefault,
       this.createdAt,
       new Date()
     );
@@ -63,10 +90,12 @@ export class Intent {
   updateDescription(newDescription: string): Intent {
     return Intent.reconstitute(
       this.id,
-      this.clientId,
       this.label,
       newDescription || '',
       this.status,
+      this.synonyms,
+      this.examplePhrases,
+      this.isDefault,
       this.createdAt,
       new Date()
     );
@@ -75,29 +104,66 @@ export class Intent {
   updateStatus(newStatus: IntentStatus): Intent {
     return Intent.reconstitute(
       this.id,
-      this.clientId,
       this.label,
       this.description,
       newStatus,
+      this.synonyms,
+      this.examplePhrases,
+      this.isDefault,
       this.createdAt,
       new Date()
     );
   }
 
-  update(label: string, description: string, status: IntentStatus): Intent {
+  updateSynonyms(newSynonyms: string[]): Intent {
+    return Intent.reconstitute(
+      this.id,
+      this.label,
+      this.description,
+      this.status,
+      newSynonyms || [],
+      this.examplePhrases,
+      this.isDefault,
+      this.createdAt,
+      new Date()
+    );
+  }
+
+  updateExamplePhrases(newExamplePhrases: string[]): Intent {
+    return Intent.reconstitute(
+      this.id,
+      this.label,
+      this.description,
+      this.status,
+      this.synonyms,
+      newExamplePhrases || [],
+      this.isDefault,
+      this.createdAt,
+      new Date()
+    );
+  }
+
+  update(
+    label: string,
+    description: string,
+    status: IntentStatus,
+    synonyms?: string[],
+    examplePhrases?: string[]
+  ): Intent {
     if (!label || label.trim().length === 0) {
       throw new Error('Label cannot be empty');
     }
 
     return Intent.reconstitute(
       this.id,
-      this.clientId,
       label.trim(),
       description || '',
       status,
+      synonyms !== undefined ? synonyms : this.synonyms,
+      examplePhrases !== undefined ? examplePhrases : this.examplePhrases,
+      this.isDefault,
       this.createdAt,
       new Date()
     );
   }
 }
-

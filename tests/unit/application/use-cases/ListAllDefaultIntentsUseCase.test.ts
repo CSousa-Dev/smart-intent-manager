@@ -1,15 +1,15 @@
 /**
- * ListAllIntentsUseCase Tests
+ * ListAllDefaultIntentsUseCase Tests
  */
 
-import { ListAllIntentsUseCase } from '../../../../src/application/use-cases/ListAllIntentsUseCase';
+import { ListAllDefaultIntentsUseCase } from '../../../../src/application/use-cases/ListAllDefaultIntentsUseCase';
 import { IIntentRepository } from '../../../../src/domain/repositories/IIntentRepository';
 import { Intent } from '../../../../src/domain/entities/Intent';
 import { IntentStatus } from '../../../../src/domain/value-objects/IntentStatus';
 
-describe('ListAllIntentsUseCase', () => {
+describe('ListAllDefaultIntentsUseCase', () => {
   let repository: jest.Mocked<IIntentRepository>;
-  let useCase: ListAllIntentsUseCase;
+  let useCase: ListAllDefaultIntentsUseCase;
 
   beforeEach(() => {
     repository = {
@@ -31,33 +31,32 @@ describe('ListAllIntentsUseCase', () => {
       getExcludedIntentIds: jest.fn(),
     } as any;
 
-    useCase = new ListAllIntentsUseCase(repository);
+    useCase = new ListAllDefaultIntentsUseCase(repository);
   });
 
-  it('should list all intents successfully', async () => {
+  it('should list all default intents successfully', async () => {
     const mockIntents = [
       Intent.create('intent-1', 'greeting', 'Description 1', IntentStatus.ACTIVE, [], [], true),
-      Intent.create('intent-2', 'farewell', 'Description 2', IntentStatus.SUGGESTED, [], [], false),
-      Intent.create('intent-3', 'question', 'Description 3', IntentStatus.INACTIVE, [], [], true),
+      Intent.create('intent-2', 'farewell', 'Description 2', IntentStatus.SUGGESTED, [], [], true),
     ];
 
-    repository.findAll.mockResolvedValue(mockIntents);
+    repository.findAllDefault.mockResolvedValue(mockIntents);
 
     const result = await useCase.execute();
 
-    expect(result).toHaveLength(3);
+    expect(result).toHaveLength(2);
     expect(result[0]?.id).toBe('intent-1');
     expect(result[1]?.id).toBe('intent-2');
-    expect(result[2]?.id).toBe('intent-3');
-    expect(repository.findAll).toHaveBeenCalled();
+    expect(repository.findAllDefault).toHaveBeenCalled();
   });
 
-  it('should return empty array when no intents exist', async () => {
-    repository.findAll.mockResolvedValue([]);
+  it('should return empty array when no default intents exist', async () => {
+    repository.findAllDefault.mockResolvedValue([]);
 
     const result = await useCase.execute();
 
     expect(result).toHaveLength(0);
-    expect(repository.findAll).toHaveBeenCalled();
+    expect(repository.findAllDefault).toHaveBeenCalled();
   });
 });
+

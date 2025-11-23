@@ -3,35 +3,63 @@
  */
 
 import { Intent } from '../../../../src/domain/entities/Intent';
-import { ClientId } from '../../../../src/domain/value-objects/ClientId';
 import { IntentStatus } from '../../../../src/domain/value-objects/IntentStatus';
 
 describe('Intent', () => {
-  const clientId = ClientId.create('client-001');
-
   describe('create', () => {
     it('should create a new intent', () => {
       const intent = Intent.create(
         'intent-id',
-        clientId,
         'greeting',
         'Greeting intent',
         IntentStatus.ACTIVE
       );
 
       expect(intent.id).toBe('intent-id');
-      expect(intent.clientId).toBe(clientId);
       expect(intent.label).toBe('greeting');
       expect(intent.description).toBe('Greeting intent');
       expect(intent.status).toBe(IntentStatus.ACTIVE);
+      expect(intent.synonyms).toEqual([]);
+      expect(intent.examplePhrases).toEqual([]);
+      expect(intent.isDefault).toBe(false);
       expect(intent.createdAt).toBeInstanceOf(Date);
       expect(intent.updatedAt).toBeInstanceOf(Date);
+    });
+
+    it('should create default intent', () => {
+      const intent = Intent.create(
+        'intent-id',
+        'greeting',
+        'Greeting intent',
+        IntentStatus.ACTIVE,
+        [],
+        [],
+        true
+      );
+
+      expect(intent.isDefault).toBe(true);
+    });
+
+    it('should create intent with synonyms and examplePhrases', () => {
+      const synonyms = ['marcar', 'agendar', 'horário'];
+      const examplePhrases = ['Quero marcar um horário', 'Posso agendar?'];
+
+      const intent = Intent.create(
+        'intent-id',
+        'agendamento',
+        'Agendamento intent',
+        IntentStatus.ACTIVE,
+        synonyms,
+        examplePhrases
+      );
+
+      expect(intent.synonyms).toEqual(synonyms);
+      expect(intent.examplePhrases).toEqual(examplePhrases);
     });
 
     it('should trim label whitespace', () => {
       const intent = Intent.create(
         'intent-id',
-        clientId,
         '  greeting  ',
         'Description',
         IntentStatus.ACTIVE
@@ -41,20 +69,14 @@ describe('Intent', () => {
     });
 
     it('should use empty string for description if not provided', () => {
-      const intent = Intent.create(
-        'intent-id',
-        clientId,
-        'greeting',
-        '',
-        IntentStatus.ACTIVE
-      );
+      const intent = Intent.create('intent-id', 'greeting', '', IntentStatus.ACTIVE);
 
       expect(intent.description).toBe('');
     });
 
     it('should throw error when label is empty', () => {
       expect(() => {
-        Intent.create('intent-id', clientId, '', 'Description', IntentStatus.ACTIVE);
+        Intent.create('intent-id', '', 'Description', IntentStatus.ACTIVE);
       }).toThrow('Label cannot be empty');
     });
   });
@@ -66,15 +88,20 @@ describe('Intent', () => {
 
       const intent = Intent.reconstitute(
         'intent-id',
-        clientId,
         'greeting',
         'Description',
         IntentStatus.ACTIVE,
+        ['synonym1'],
+        ['example1'],
+        true,
         createdAt,
         updatedAt
       );
 
       expect(intent.id).toBe('intent-id');
+      expect(intent.synonyms).toEqual(['synonym1']);
+      expect(intent.examplePhrases).toEqual(['example1']);
+      expect(intent.isDefault).toBe(true);
       expect(intent.createdAt).toEqual(createdAt);
       expect(intent.updatedAt).toEqual(updatedAt);
     });
@@ -82,13 +109,7 @@ describe('Intent', () => {
 
   describe('updateLabel', () => {
     it('should update label', () => {
-      const intent = Intent.create(
-        'intent-id',
-        clientId,
-        'greeting',
-        'Description',
-        IntentStatus.ACTIVE
-      );
+      const intent = Intent.create('intent-id', 'greeting', 'Description', IntentStatus.ACTIVE);
 
       const originalUpdatedAt = intent.updatedAt.getTime();
       const updated = intent.updateLabel('farewell');
@@ -99,26 +120,14 @@ describe('Intent', () => {
     });
 
     it('should trim label whitespace', () => {
-      const intent = Intent.create(
-        'intent-id',
-        clientId,
-        'greeting',
-        'Description',
-        IntentStatus.ACTIVE
-      );
+      const intent = Intent.create('intent-id', 'greeting', 'Description', IntentStatus.ACTIVE);
 
       const updated = intent.updateLabel('  farewell  ');
       expect(updated.label).toBe('farewell');
     });
 
     it('should throw error when label is empty', () => {
-      const intent = Intent.create(
-        'intent-id',
-        clientId,
-        'greeting',
-        'Description',
-        IntentStatus.ACTIVE
-      );
+      const intent = Intent.create('intent-id', 'greeting', 'Description', IntentStatus.ACTIVE);
 
       expect(() => intent.updateLabel('')).toThrow('Label cannot be empty');
     });
@@ -128,7 +137,6 @@ describe('Intent', () => {
     it('should update description', () => {
       const intent = Intent.create(
         'intent-id',
-        clientId,
         'greeting',
         'Old description',
         IntentStatus.ACTIVE
@@ -143,13 +151,7 @@ describe('Intent', () => {
     });
 
     it('should use empty string if description is not provided', () => {
-      const intent = Intent.create(
-        'intent-id',
-        clientId,
-        'greeting',
-        'Description',
-        IntentStatus.ACTIVE
-      );
+      const intent = Intent.create('intent-id', 'greeting', 'Description', IntentStatus.ACTIVE);
 
       const updated = intent.updateDescription('');
       expect(updated.description).toBe('');
@@ -158,13 +160,7 @@ describe('Intent', () => {
 
   describe('updateStatus', () => {
     it('should update status', () => {
-      const intent = Intent.create(
-        'intent-id',
-        clientId,
-        'greeting',
-        'Description',
-        IntentStatus.SUGGESTED
-      );
+      const intent = Intent.create('intent-id', 'greeting', 'Description', IntentStatus.SUGGESTED);
 
       const originalUpdatedAt = intent.updatedAt.getTime();
       const updated = intent.updateStatus(IntentStatus.ACTIVE);
@@ -175,34 +171,75 @@ describe('Intent', () => {
     });
   });
 
+  describe('updateSynonyms', () => {
+    it('should update synonyms', () => {
+      const intent = Intent.create('intent-id', 'greeting', 'Description', IntentStatus.ACTIVE);
+
+      const newSynonyms = ['marcar', 'agendar'];
+      const updated = intent.updateSynonyms(newSynonyms);
+
+      expect(updated.synonyms).toEqual(newSynonyms);
+      expect(updated.id).toBe(intent.id);
+    });
+  });
+
+  describe('updateExamplePhrases', () => {
+    it('should update examplePhrases', () => {
+      const intent = Intent.create('intent-id', 'greeting', 'Description', IntentStatus.ACTIVE);
+
+      const newPhrases = ['Quero marcar', 'Posso agendar?'];
+      const updated = intent.updateExamplePhrases(newPhrases);
+
+      expect(updated.examplePhrases).toEqual(newPhrases);
+      expect(updated.id).toBe(intent.id);
+    });
+  });
+
   describe('update', () => {
-    it('should update label, description and status', () => {
+    it('should update label, description, status, synonyms and examplePhrases', () => {
       const intent = Intent.create(
         'intent-id',
-        clientId,
         'greeting',
         'Old description',
         IntentStatus.SUGGESTED
       );
 
       const originalUpdatedAt = intent.updatedAt.getTime();
-      const updated = intent.update('farewell', 'New description', IntentStatus.ACTIVE);
+      const updated = intent.update(
+        'farewell',
+        'New description',
+        IntentStatus.ACTIVE,
+        ['marcar'],
+        ['Quero marcar']
+      );
 
       expect(updated.label).toBe('farewell');
       expect(updated.description).toBe('New description');
       expect(updated.status).toBe(IntentStatus.ACTIVE);
+      expect(updated.synonyms).toEqual(['marcar']);
+      expect(updated.examplePhrases).toEqual(['Quero marcar']);
       expect(updated.id).toBe(intent.id);
       expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(originalUpdatedAt);
     });
 
-    it('should throw error when label is empty', () => {
+    it('should preserve existing synonyms and examplePhrases if not provided', () => {
       const intent = Intent.create(
         'intent-id',
-        clientId,
         'greeting',
         'Description',
-        IntentStatus.ACTIVE
+        IntentStatus.ACTIVE,
+        ['old-synonym'],
+        ['old-phrase']
       );
+
+      const updated = intent.update('new-label', 'New description', IntentStatus.ACTIVE);
+
+      expect(updated.synonyms).toEqual(['old-synonym']);
+      expect(updated.examplePhrases).toEqual(['old-phrase']);
+    });
+
+    it('should throw error when label is empty', () => {
+      const intent = Intent.create('intent-id', 'greeting', 'Description', IntentStatus.ACTIVE);
 
       expect(() => intent.update('', 'Description', IntentStatus.ACTIVE)).toThrow(
         'Label cannot be empty'
@@ -210,4 +247,3 @@ describe('Intent', () => {
     });
   });
 });
-

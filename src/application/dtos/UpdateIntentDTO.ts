@@ -9,5 +9,6 @@ export interface UpdateIntentDTO {
   label?: string;
   description?: string;
   status?: IntentStatus;
+  synonyms?: string[];
+  examplePhrases?: string[];
 }
-

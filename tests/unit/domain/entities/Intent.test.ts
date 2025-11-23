@@ -1,5 +1,6 @@
 /**
  * Intent Entity Tests
+ * Testa a entidade Intent e suas validações internas
  */
 
 import { Intent } from '../../../../src/domain/entities/Intent';
@@ -78,6 +79,54 @@ describe('Intent', () => {
       expect(() => {
         Intent.create('intent-id', '', 'Description', IntentStatus.ACTIVE);
       }).toThrow('Label cannot be empty');
+    });
+
+    it('should throw error when status is invalid', () => {
+      expect(() => {
+        Intent.create('intent-id', 'greeting', 'Description', 'INVALID' as IntentStatus);
+      }).toThrow('Status must be ACTIVE, INACTIVE, or SUGGESTED');
+    });
+
+    it('should throw error when synonyms is not an array', () => {
+      expect(() => {
+        Intent.create('intent-id', 'greeting', 'Description', IntentStatus.ACTIVE, 'not-array' as any);
+      }).toThrow('synonyms must be an array of strings');
+    });
+
+    it('should throw error when examplePhrases is not an array', () => {
+      expect(() => {
+        Intent.create('intent-id', 'greeting', 'Description', IntentStatus.ACTIVE, [], 'not-array' as any);
+      }).toThrow('examplePhrases must be an array of strings');
+    });
+  });
+
+  describe('createForCreation', () => {
+    it('should create intent with ACTIVE status', () => {
+      const intent = Intent.createForCreation(
+        'intent-id',
+        'greeting',
+        'Description',
+        IntentStatus.ACTIVE
+      );
+
+      expect(intent.status).toBe(IntentStatus.ACTIVE);
+    });
+
+    it('should create intent with SUGGESTED status', () => {
+      const intent = Intent.createForCreation(
+        'intent-id',
+        'greeting',
+        'Description',
+        IntentStatus.SUGGESTED
+      );
+
+      expect(intent.status).toBe(IntentStatus.SUGGESTED);
+    });
+
+    it('should throw error when status is INACTIVE', () => {
+      expect(() => {
+        Intent.createForCreation('intent-id', 'greeting', 'Description', IntentStatus.INACTIVE);
+      }).toThrow('Status must be ACTIVE or SUGGESTED when creating');
     });
   });
 
@@ -169,6 +218,14 @@ describe('Intent', () => {
       expect(updated.id).toBe(intent.id);
       expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(originalUpdatedAt);
     });
+
+    it('should throw error when status is invalid', () => {
+      const intent = Intent.create('intent-id', 'greeting', 'Description', IntentStatus.ACTIVE);
+
+      expect(() => intent.updateStatus('INVALID' as IntentStatus)).toThrow(
+        'Status must be ACTIVE, INACTIVE, or SUGGESTED'
+      );
+    });
   });
 
   describe('updateSynonyms', () => {
@@ -181,6 +238,12 @@ describe('Intent', () => {
       expect(updated.synonyms).toEqual(newSynonyms);
       expect(updated.id).toBe(intent.id);
     });
+
+    it('should throw error when synonyms is not an array', () => {
+      const intent = Intent.create('intent-id', 'greeting', 'Description', IntentStatus.ACTIVE);
+
+      expect(() => intent.updateSynonyms('not-array' as any)).toThrow('synonyms must be an array of strings');
+    });
   });
 
   describe('updateExamplePhrases', () => {
@@ -192,6 +255,14 @@ describe('Intent', () => {
 
       expect(updated.examplePhrases).toEqual(newPhrases);
       expect(updated.id).toBe(intent.id);
+    });
+
+    it('should throw error when examplePhrases is not an array', () => {
+      const intent = Intent.create('intent-id', 'greeting', 'Description', IntentStatus.ACTIVE);
+
+      expect(() => intent.updateExamplePhrases('not-array' as any)).toThrow(
+        'examplePhrases must be an array of strings'
+      );
     });
   });
 

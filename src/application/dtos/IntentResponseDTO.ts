@@ -23,11 +23,11 @@ export interface ListIntentsResponseDTO {
 }
 
 export interface LinkIntentDTO {
-  clientId: string;
+  tenantId: string;
   intentId: string;
 }
 
 export interface ExcludeIntentDTO {
-  clientId: string;
+  tenantId: string;
   intentId: string;
 }

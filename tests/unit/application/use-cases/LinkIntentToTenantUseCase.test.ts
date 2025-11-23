@@ -1,17 +1,17 @@
 /**
- * LinkIntentToClientUseCase Tests
+ * LinkIntentToTenantUseCase Tests
  */
 
-import { LinkIntentToClientUseCase } from '../../../../src/application/use-cases/LinkIntentToClientUseCase';
+import { LinkIntentToTenantUseCase } from '../../../../src/application/use-cases/LinkIntentToTenantUseCase';
 import { IIntentRepository } from '../../../../src/domain/repositories/IIntentRepository';
 import { Intent } from '../../../../src/domain/entities/Intent';
-import { ClientId } from '../../../../src/domain/value-objects/ClientId';
+import { TenantId } from '../../../../src/domain/value-objects/TenantId';
 import { IntentStatus } from '../../../../src/domain/value-objects/IntentStatus';
 import { AppError } from '../../../../src/shared/utils/AppError';
 
-describe('LinkIntentToClientUseCase', () => {
+describe('LinkIntentToTenantUseCase', () => {
   let repository: jest.Mocked<IIntentRepository>;
-  let useCase: LinkIntentToClientUseCase;
+  let useCase: LinkIntentToTenantUseCase;
 
   beforeEach(() => {
     repository = {
@@ -22,30 +22,30 @@ describe('LinkIntentToClientUseCase', () => {
       findAllDefault: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
-      linkIntentToClient: jest.fn(),
-      unlinkIntentFromClient: jest.fn(),
-      excludeIntentFromClient: jest.fn(),
+      linkIntentToTenant: jest.fn(),
+      unlinkIntentFromTenant: jest.fn(),
+      excludeIntentFromTenant: jest.fn(),
       removeExclusion: jest.fn(),
-      findIntentsByClient: jest.fn(),
-      isIntentLinkedToClient: jest.fn(),
-      isIntentExcludedFromClient: jest.fn(),
+      findIntentsByTenant: jest.fn(),
+      isIntentLinkedToTenant: jest.fn(),
+      isIntentExcludedFromTenant: jest.fn(),
       getLinkedIntentIds: jest.fn(),
       getExcludedIntentIds: jest.fn(),
     } as any;
 
-    useCase = new LinkIntentToClientUseCase(repository);
+    useCase = new LinkIntentToTenantUseCase(repository);
   });
 
-  it('should link default intent to client', async () => {
+  it('should link default intent to tenant', async () => {
     const intentId = 'intent-id';
-    const clientId = 'client-001';
+    const tenantId = 'tenant-001';
     const intent = Intent.create(intentId, 'greeting', 'Description', IntentStatus.ACTIVE, [], [], true);
 
     repository.findById.mockResolvedValue(intent);
-    repository.isIntentExcludedFromClient.mockResolvedValue(false);
+    repository.isIntentExcludedFromTenant.mockResolvedValue(false);
     repository.removeExclusion.mockResolvedValue();
 
-    await useCase.execute(intentId, clientId);
+    await useCase.execute(intentId, tenantId);
 
     expect(repository.findById).toHaveBeenCalledWith(intentId);
     expect(repository.removeExclusion).not.toHaveBeenCalled();
@@ -53,44 +53,44 @@ describe('LinkIntentToClientUseCase', () => {
 
   it('should remove exclusion if intent is excluded', async () => {
     const intentId = 'intent-id';
-    const clientId = 'client-001';
+    const tenantId = 'tenant-001';
     const intent = Intent.create(intentId, 'greeting', 'Description', IntentStatus.ACTIVE, [], [], true);
 
     repository.findById.mockResolvedValue(intent);
-    repository.isIntentExcludedFromClient.mockResolvedValue(true);
+    repository.isIntentExcludedFromTenant.mockResolvedValue(true);
     repository.removeExclusion.mockResolvedValue();
 
-    await useCase.execute(intentId, clientId);
+    await useCase.execute(intentId, tenantId);
 
-    expect(repository.removeExclusion).toHaveBeenCalledWith(intentId, expect.any(ClientId));
+    expect(repository.removeExclusion).toHaveBeenCalledWith(intentId, expect.any(TenantId));
   });
 
-  it('should link non-default intent to client', async () => {
+  it('should link non-default intent to tenant', async () => {
     const intentId = 'intent-id';
-    const clientId = 'client-001';
+    const tenantId = 'tenant-001';
     const intent = Intent.create(intentId, 'greeting', 'Description', IntentStatus.ACTIVE, [], [], false);
 
     repository.findById.mockResolvedValue(intent);
-    repository.isIntentExcludedFromClient.mockResolvedValue(false);
-    repository.isIntentLinkedToClient.mockResolvedValue(false);
-    repository.linkIntentToClient.mockResolvedValue();
+    repository.isIntentExcludedFromTenant.mockResolvedValue(false);
+    repository.isIntentLinkedToTenant.mockResolvedValue(false);
+    repository.linkIntentToTenant.mockResolvedValue();
 
-    await useCase.execute(intentId, clientId);
+    await useCase.execute(intentId, tenantId);
 
-    expect(repository.linkIntentToClient).toHaveBeenCalledWith(intentId, expect.any(ClientId));
+    expect(repository.linkIntentToTenant).toHaveBeenCalledWith(intentId, expect.any(TenantId));
   });
 
   it('should throw error when intent not found', async () => {
     repository.findById.mockResolvedValue(null);
 
-    await expect(useCase.execute('non-existent-id', 'client-001')).rejects.toThrow(AppError);
+    await expect(useCase.execute('non-existent-id', 'tenant-001')).rejects.toThrow(AppError);
   });
 
   it('should throw error when intentId is empty', async () => {
-    await expect(useCase.execute('', 'client-001')).rejects.toThrow(AppError);
+    await expect(useCase.execute('', 'tenant-001')).rejects.toThrow(AppError);
   });
 
-  it('should throw error when clientId is empty', async () => {
+  it('should throw error when tenantId is empty', async () => {
     await expect(useCase.execute('intent-id', '')).rejects.toThrow(AppError);
   });
 });

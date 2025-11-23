@@ -34,7 +34,7 @@ cp env.example.txt .env
 npm run dev
 ```
 
-O servidor estará rodando em `http://localhost:3001`
+O servidor estará rodando em `http://localhost:3010`
 
 ### 4. Build para produção
 
@@ -85,7 +85,7 @@ import { Application } from 'express';
 import { router } from './presentation/routes';
 
 export function registerModule(app: Application): void {
-  app.use('/api/v1/meu-modulo', router);
+  app.use('/api/meu-modulo', router);
 }
 ```
 
@@ -113,10 +113,9 @@ registerModule(app);
 | Variável | Descrição | Padrão |
 |----------|-----------|--------|
 | `NODE_ENV` | Ambiente de execução | `development` |
-| `PORT` | Porta do servidor | `3001` |
+| `PORT` | Porta do servidor | `3010` |
 | `CORS_ORIGIN` | Origem permitida para CORS | `*` |
 | `API_PREFIX` | Prefixo da API | `/api` |
-| `API_VERSION` | Versão da API | `v1` |
 | `LOG_LEVEL` | Nível de log (info, debug, warn, error) | `info` |
 
 ## 🔍 Health Check

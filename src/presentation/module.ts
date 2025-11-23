@@ -7,16 +7,17 @@ import { Application } from 'express';
 import { router, setIntentController } from './routes/intentRoutes';
 import { IntentController } from './controllers/IntentController';
 import { CreateDefaultIntentUseCase } from '../application/use-cases/CreateDefaultIntentUseCase';
-import { CreateClientIntentUseCase } from '../application/use-cases/CreateClientIntentUseCase';
+import { CreateTenantIntentUseCase } from '../application/use-cases/CreateTenantIntentUseCase';
 import { GetIntentUseCase } from '../application/use-cases/GetIntentUseCase';
 import { UpdateIntentUseCase } from '../application/use-cases/UpdateIntentUseCase';
 import { DeleteIntentUseCase } from '../application/use-cases/DeleteIntentUseCase';
-import { ListClientIntentsUseCase } from '../application/use-cases/ListClientIntentsUseCase';
+import { ListTenantIntentsUseCase } from '../application/use-cases/ListTenantIntentsUseCase';
 import { ListAllIntentsUseCase } from '../application/use-cases/ListAllIntentsUseCase';
 import { ListAllDefaultIntentsUseCase } from '../application/use-cases/ListAllDefaultIntentsUseCase';
-import { LinkIntentToClientUseCase } from '../application/use-cases/LinkIntentToClientUseCase';
-import { ExcludeIntentFromClientUseCase } from '../application/use-cases/ExcludeIntentFromClientUseCase';
+import { LinkIntentToTenantUseCase } from '../application/use-cases/LinkIntentToTenantUseCase';
+import { ExcludeIntentFromTenantUseCase } from '../application/use-cases/ExcludeIntentFromTenantUseCase';
 import { SQLiteIntentRepository } from '../infrastructure/repositories/SQLiteIntentRepository';
+import { TenantApiService } from '../infrastructure/services/TenantApiService';
 import { runMigrations } from '../infrastructure/database/migrations/runMigrations';
 import { config } from '../config/environment';
 
@@ -27,30 +28,33 @@ export function registerModule(app: Application): void {
   // Inicializa repositório
   const repository = new SQLiteIntentRepository();
 
+  // Inicializa serviço de tenant (API externa)
+  const tenantService = new TenantApiService();
+
   // Inicializa use cases
   const createDefaultIntentUseCase = new CreateDefaultIntentUseCase(repository);
-  const createClientIntentUseCase = new CreateClientIntentUseCase(repository);
+  const createTenantIntentUseCase = new CreateTenantIntentUseCase(repository, tenantService);
   const getIntentUseCase = new GetIntentUseCase(repository);
   const updateIntentUseCase = new UpdateIntentUseCase(repository);
   const deleteIntentUseCase = new DeleteIntentUseCase(repository);
-  const listClientIntentsUseCase = new ListClientIntentsUseCase(repository);
+  const listTenantIntentsUseCase = new ListTenantIntentsUseCase(repository);
   const listAllIntentsUseCase = new ListAllIntentsUseCase(repository);
   const listAllDefaultIntentsUseCase = new ListAllDefaultIntentsUseCase(repository);
-  const linkIntentToClientUseCase = new LinkIntentToClientUseCase(repository);
-  const excludeIntentFromClientUseCase = new ExcludeIntentFromClientUseCase(repository);
+  const linkIntentToTenantUseCase = new LinkIntentToTenantUseCase(repository);
+  const excludeIntentFromTenantUseCase = new ExcludeIntentFromTenantUseCase(repository);
 
   // Inicializa controller
   const intentController = new IntentController(
     createDefaultIntentUseCase,
-    createClientIntentUseCase,
+    createTenantIntentUseCase,
     getIntentUseCase,
     updateIntentUseCase,
     deleteIntentUseCase,
-    listClientIntentsUseCase,
+    listTenantIntentsUseCase,
     listAllIntentsUseCase,
     listAllDefaultIntentsUseCase,
-    linkIntentToClientUseCase,
-    excludeIntentFromClientUseCase
+    linkIntentToTenantUseCase,
+    excludeIntentFromTenantUseCase
   );
 
   // Configura controller nas rotas

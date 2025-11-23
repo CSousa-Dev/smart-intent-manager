@@ -1,9 +1,10 @@
 /**
  * Intent Entity
  * Entidade principal que representa uma intenção
+ * Garante sua própria integridade através de validações internas
  */
 
-import { IntentStatus } from '../value-objects/IntentStatus';
+import { IntentStatus, isValidIntentStatus } from '../value-objects/IntentStatus';
 
 export class Intent {
   private constructor(
@@ -27,9 +28,11 @@ export class Intent {
     examplePhrases: string[] = [],
     isDefault: boolean = false
   ): Intent {
-    if (!label || label.trim().length === 0) {
-      throw new Error('Label cannot be empty');
-    }
+    // Validações de integridade da entidade
+    Intent.validateLabel(label);
+    Intent.validateStatus(status);
+    Intent.validateSynonyms(synonyms);
+    Intent.validateExamplePhrases(examplePhrases);
 
     const now = new Date();
     return new Intent(
@@ -45,6 +48,20 @@ export class Intent {
     );
   }
 
+  static createForCreation(
+    id: string,
+    label: string,
+    description: string,
+    status: IntentStatus,
+    synonyms: string[] = [],
+    examplePhrases: string[] = [],
+    isDefault: boolean = false
+  ): Intent {
+    // Validação adicional: status deve ser ACTIVE ou SUGGESTED na criação
+    Intent.validateStatusForCreation(status);
+    return Intent.create(id, label, description, status, synonyms, examplePhrases, isDefault);
+  }
+
   static reconstitute(
     id: string,
     label: string,
@@ -56,6 +73,13 @@ export class Intent {
     createdAt: Date,
     updatedAt: Date
   ): Intent {
+    // Na reconstitição, assumimos que os dados já foram validados anteriormente
+    // Mas ainda validamos para garantir integridade
+    Intent.validateLabel(label);
+    Intent.validateStatus(status);
+    Intent.validateSynonyms(synonyms);
+    Intent.validateExamplePhrases(examplePhrases);
+
     return new Intent(
       id,
       label,
@@ -70,9 +94,7 @@ export class Intent {
   }
 
   updateLabel(newLabel: string): Intent {
-    if (!newLabel || newLabel.trim().length === 0) {
-      throw new Error('Label cannot be empty');
-    }
+    Intent.validateLabel(newLabel);
 
     return Intent.reconstitute(
       this.id,
@@ -102,6 +124,8 @@ export class Intent {
   }
 
   updateStatus(newStatus: IntentStatus): Intent {
+    Intent.validateStatus(newStatus);
+
     return Intent.reconstitute(
       this.id,
       this.label,
@@ -116,6 +140,8 @@ export class Intent {
   }
 
   updateSynonyms(newSynonyms: string[]): Intent {
+    Intent.validateSynonyms(newSynonyms);
+
     return Intent.reconstitute(
       this.id,
       this.label,
@@ -130,6 +156,8 @@ export class Intent {
   }
 
   updateExamplePhrases(newExamplePhrases: string[]): Intent {
+    Intent.validateExamplePhrases(newExamplePhrases);
+
     return Intent.reconstitute(
       this.id,
       this.label,
@@ -150,8 +178,15 @@ export class Intent {
     synonyms?: string[],
     examplePhrases?: string[]
   ): Intent {
-    if (!label || label.trim().length === 0) {
-      throw new Error('Label cannot be empty');
+    Intent.validateLabel(label);
+    Intent.validateStatus(status);
+
+    if (synonyms !== undefined) {
+      Intent.validateSynonyms(synonyms);
+    }
+
+    if (examplePhrases !== undefined) {
+      Intent.validateExamplePhrases(examplePhrases);
     }
 
     return Intent.reconstitute(
@@ -165,5 +200,54 @@ export class Intent {
       this.createdAt,
       new Date()
     );
+  }
+
+  // Métodos privados de validação - garantem integridade da entidade
+  private static validateLabel(label: string): void {
+    if (!label || label.trim().length === 0) {
+      throw new Error('Label cannot be empty');
+    }
+  }
+
+  private static validateStatus(status: string | IntentStatus): void {
+    if (!status || !isValidIntentStatus(status)) {
+      throw new Error('Status must be ACTIVE, INACTIVE, or SUGGESTED');
+    }
+  }
+
+  private static validateStatusForCreation(status: IntentStatus): void {
+    if (status !== IntentStatus.ACTIVE && status !== IntentStatus.SUGGESTED) {
+      throw new Error('Status must be ACTIVE or SUGGESTED when creating');
+    }
+  }
+
+  private static validateSynonyms(synonyms: unknown): void {
+    if (synonyms === undefined || synonyms === null) {
+      return;
+    }
+
+    if (!Array.isArray(synonyms)) {
+      throw new Error('synonyms must be an array of strings');
+    }
+
+    const invalidItems = synonyms.filter((item) => typeof item !== 'string');
+    if (invalidItems.length > 0) {
+      throw new Error('All items in synonyms must be strings');
+    }
+  }
+
+  private static validateExamplePhrases(examplePhrases: unknown): void {
+    if (examplePhrases === undefined || examplePhrases === null) {
+      return;
+    }
+
+    if (!Array.isArray(examplePhrases)) {
+      throw new Error('examplePhrases must be an array of strings');
+    }
+
+    const invalidItems = examplePhrases.filter((item) => typeof item !== 'string');
+    if (invalidItems.length > 0) {
+      throw new Error('All items in examplePhrases must be strings');
+    }
   }
 }

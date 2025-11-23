@@ -6,7 +6,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { IIntentRepository } from '../../domain/repositories/IIntentRepository';
 import { Intent } from '../../domain/entities/Intent';
-import { ClientId } from '../../domain/value-objects/ClientId';
+import { TenantId } from '../../domain/value-objects/TenantId';
 import { IntentStatus } from '../../domain/value-objects/IntentStatus';
 import { getDatabase } from '../database/DatabaseConnection';
 import { IntentAccessService } from '../../domain/services/IntentAccessService';
@@ -143,16 +143,16 @@ export class SQLiteIntentRepository implements IIntentRepository {
     stmt.run(id);
   }
 
-  async linkIntentToClient(intentId: string, clientId: ClientId): Promise<void> {
+  async linkIntentToTenant(intentId: string, tenantId: TenantId): Promise<void> {
     const db = getDatabase();
 
     const stmt = db.prepare(`
-      INSERT INTO client_intents (id, client_id, intent_id, created_at)
+      INSERT INTO tenant_intents (id, tenant_id, intent_id, created_at)
       VALUES (?, ?, ?, ?)
     `);
 
     try {
-      stmt.run(uuidv4(), clientId.getValue(), intentId, new Date().toISOString());
+      stmt.run(uuidv4(), tenantId.getValue(), intentId, new Date().toISOString());
     } catch (error: any) {
       if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
         // Já está vinculado, não precisa fazer nada
@@ -162,26 +162,26 @@ export class SQLiteIntentRepository implements IIntentRepository {
     }
   }
 
-  async unlinkIntentFromClient(intentId: string, clientId: ClientId): Promise<void> {
+  async unlinkIntentFromTenant(intentId: string, tenantId: TenantId): Promise<void> {
     const db = getDatabase();
 
     const stmt = db.prepare(`
-      DELETE FROM client_intents WHERE intent_id = ? AND client_id = ?
+      DELETE FROM tenant_intents WHERE intent_id = ? AND tenant_id = ?
     `);
 
-    stmt.run(intentId, clientId.getValue());
+    stmt.run(intentId, tenantId.getValue());
   }
 
-  async excludeIntentFromClient(intentId: string, clientId: ClientId): Promise<void> {
+  async excludeIntentFromTenant(intentId: string, tenantId: TenantId): Promise<void> {
     const db = getDatabase();
 
     const stmt = db.prepare(`
-      INSERT INTO client_intent_exclusions (id, client_id, intent_id, created_at)
+      INSERT INTO tenant_intent_exclusions (id, tenant_id, intent_id, created_at)
       VALUES (?, ?, ?, ?)
     `);
 
     try {
-      stmt.run(uuidv4(), clientId.getValue(), intentId, new Date().toISOString());
+      stmt.run(uuidv4(), tenantId.getValue(), intentId, new Date().toISOString());
     } catch (error: any) {
       if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
         // Já está excluído, não precisa fazer nada
@@ -191,81 +191,81 @@ export class SQLiteIntentRepository implements IIntentRepository {
     }
   }
 
-  async removeExclusion(intentId: string, clientId: ClientId): Promise<void> {
+  async removeExclusion(intentId: string, tenantId: TenantId): Promise<void> {
     const db = getDatabase();
 
     const stmt = db.prepare(`
-      DELETE FROM client_intent_exclusions WHERE intent_id = ? AND client_id = ?
+      DELETE FROM tenant_intent_exclusions WHERE intent_id = ? AND tenant_id = ?
     `);
 
-    stmt.run(intentId, clientId.getValue());
+    stmt.run(intentId, tenantId.getValue());
   }
 
-  async findIntentsByClient(clientId: ClientId): Promise<Intent[]> {
+  async findIntentsByTenant(tenantId: TenantId): Promise<Intent[]> {
     const db = getDatabase();
 
     // Busca todas as intenções (defaults e específicas)
     const allIntents = await this.findAll();
 
     // Busca IDs vinculados e excluídos
-    const linkedIds = await this.getLinkedIntentIds(clientId);
-    const excludedIds = await this.getExcludedIntentIds(clientId);
+    const linkedIds = await this.getLinkedIntentIds(tenantId);
+    const excludedIds = await this.getExcludedIntentIds(tenantId);
 
     // Filtra usando o serviço de domínio
-    return IntentAccessService.filterByClientAccess(
+    return IntentAccessService.filterByTenantAccess(
       allIntents,
-      clientId,
+      tenantId,
       linkedIds,
       excludedIds
     );
   }
 
-  async isIntentLinkedToClient(intentId: string, clientId: ClientId): Promise<boolean> {
+  async isIntentLinkedToTenant(intentId: string, tenantId: TenantId): Promise<boolean> {
     const db = getDatabase();
 
     const stmt = db.prepare(`
-      SELECT COUNT(*) as count FROM client_intents 
-      WHERE intent_id = ? AND client_id = ?
+      SELECT COUNT(*) as count FROM tenant_intents 
+      WHERE intent_id = ? AND tenant_id = ?
     `);
 
-    const result = stmt.get(intentId, clientId.getValue()) as { count: number };
+    const result = stmt.get(intentId, tenantId.getValue()) as { count: number };
 
     return result.count > 0;
   }
 
-  async isIntentExcludedFromClient(intentId: string, clientId: ClientId): Promise<boolean> {
+  async isIntentExcludedFromTenant(intentId: string, tenantId: TenantId): Promise<boolean> {
     const db = getDatabase();
 
     const stmt = db.prepare(`
-      SELECT COUNT(*) as count FROM client_intent_exclusions 
-      WHERE intent_id = ? AND client_id = ?
+      SELECT COUNT(*) as count FROM tenant_intent_exclusions 
+      WHERE intent_id = ? AND tenant_id = ?
     `);
 
-    const result = stmt.get(intentId, clientId.getValue()) as { count: number };
+    const result = stmt.get(intentId, tenantId.getValue()) as { count: number };
 
     return result.count > 0;
   }
 
-  async getLinkedIntentIds(clientId: ClientId): Promise<Set<string>> {
+  async getLinkedIntentIds(tenantId: TenantId): Promise<Set<string>> {
     const db = getDatabase();
 
     const stmt = db.prepare(`
-      SELECT intent_id FROM client_intents WHERE client_id = ?
+      SELECT intent_id FROM tenant_intents WHERE tenant_id = ?
     `);
 
-    const rows = stmt.all(clientId.getValue()) as Array<{ intent_id: string }>;
+    const rows = stmt.all(tenantId.getValue()) as Array<{ intent_id: string }>;
 
     return new Set(rows.map((row) => row.intent_id));
   }
 
-  async getExcludedIntentIds(clientId: ClientId): Promise<Set<string>> {
+  async getExcludedIntentIds(tenantId: TenantId): Promise<Set<string>> {
     const db = getDatabase();
 
     const stmt = db.prepare(`
-      SELECT intent_id FROM client_intent_exclusions WHERE client_id = ?
+      SELECT intent_id FROM tenant_intent_exclusions WHERE tenant_id = ?
     `);
 
-    const rows = stmt.all(clientId.getValue()) as Array<{ intent_id: string }>;
+    const rows = stmt.all(tenantId.getValue()) as Array<{ intent_id: string }>;
 
     return new Set(rows.map((row) => row.intent_id));
   }

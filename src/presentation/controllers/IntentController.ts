@@ -5,22 +5,22 @@
 
 import { Request, Response } from 'express';
 import { CreateDefaultIntentUseCase } from '../../application/use-cases/CreateDefaultIntentUseCase';
-import { CreateClientIntentUseCase } from '../../application/use-cases/CreateClientIntentUseCase';
+import { CreateTenantIntentUseCase } from '../../application/use-cases/CreateTenantIntentUseCase';
 import { GetIntentUseCase } from '../../application/use-cases/GetIntentUseCase';
 import { UpdateIntentUseCase } from '../../application/use-cases/UpdateIntentUseCase';
 import { DeleteIntentUseCase } from '../../application/use-cases/DeleteIntentUseCase';
-import { ListClientIntentsUseCase } from '../../application/use-cases/ListClientIntentsUseCase';
+import { ListTenantIntentsUseCase } from '../../application/use-cases/ListTenantIntentsUseCase';
 import { ListAllIntentsUseCase } from '../../application/use-cases/ListAllIntentsUseCase';
 import { ListAllDefaultIntentsUseCase } from '../../application/use-cases/ListAllDefaultIntentsUseCase';
-import { LinkIntentToClientUseCase } from '../../application/use-cases/LinkIntentToClientUseCase';
-import { ExcludeIntentFromClientUseCase } from '../../application/use-cases/ExcludeIntentFromClientUseCase';
+import { LinkIntentToTenantUseCase } from '../../application/use-cases/LinkIntentToTenantUseCase';
+import { ExcludeIntentFromTenantUseCase } from '../../application/use-cases/ExcludeIntentFromTenantUseCase';
 import {
   IntentResponseDTO,
   ListIntentsResponseDTO,
   LinkIntentDTO,
   ExcludeIntentDTO,
 } from '../../application/dtos/IntentResponseDTO';
-import { CreateDefaultIntentDTO, CreateClientIntentDTO } from '../../application/dtos/CreateIntentDTO';
+import { CreateDefaultIntentDTO, CreateTenantIntentDTO } from '../../application/dtos/CreateIntentDTO';
 import { UpdateIntentDTO } from '../../application/dtos/UpdateIntentDTO';
 import { Intent } from '../../domain/entities/Intent';
 import { IntentStatus, isValidIntentStatus } from '../../domain/value-objects/IntentStatus';
@@ -30,15 +30,15 @@ import { successResponse, errorResponse } from '../../shared/types/ApiResponse';
 export class IntentController {
   constructor(
     private readonly createDefaultIntentUseCase: CreateDefaultIntentUseCase,
-    private readonly createClientIntentUseCase: CreateClientIntentUseCase,
+    private readonly createTenantIntentUseCase: CreateTenantIntentUseCase,
     private readonly getIntentUseCase: GetIntentUseCase,
     private readonly updateIntentUseCase: UpdateIntentUseCase,
     private readonly deleteIntentUseCase: DeleteIntentUseCase,
-    private readonly listClientIntentsUseCase: ListClientIntentsUseCase,
+    private readonly listTenantIntentsUseCase: ListTenantIntentsUseCase,
     private readonly listAllIntentsUseCase: ListAllIntentsUseCase,
     private readonly listAllDefaultIntentsUseCase: ListAllDefaultIntentsUseCase,
-    private readonly linkIntentToClientUseCase: LinkIntentToClientUseCase,
-    private readonly excludeIntentFromClientUseCase: ExcludeIntentFromClientUseCase
+    private readonly linkIntentToTenantUseCase: LinkIntentToTenantUseCase,
+    private readonly excludeIntentFromTenantUseCase: ExcludeIntentFromTenantUseCase
   ) {}
 
   async createDefaultIntent(req: Request, res: Response): Promise<void> {
@@ -54,10 +54,10 @@ export class IntentController {
     }
   }
 
-  async createClientIntent(req: Request, res: Response): Promise<void> {
+  async createTenantIntent(req: Request, res: Response): Promise<void> {
     try {
-      const dto = this.validateCreateClientIntentDTO(req.body);
-      const intent = await this.createClientIntentUseCase.execute(dto);
+      const dto = this.validateCreateTenantIntentDTO(req.body);
+      const intent = await this.createTenantIntentUseCase.execute(dto);
 
       const responseData: IntentResponseDTO = this.mapIntentToResponseDTO(intent);
 
@@ -114,15 +114,15 @@ export class IntentController {
     }
   }
 
-  async listClientIntents(req: Request, res: Response): Promise<void> {
+  async listTenantIntents(req: Request, res: Response): Promise<void> {
     try {
-      const clientId = req.query.clientId as string | undefined;
+      const tenantId = req.query.tenantId as string | undefined;
 
-      if (!clientId) {
-        throw AppError.badRequest('clientId query parameter is required');
+      if (!tenantId) {
+        throw AppError.badRequest('tenantId query parameter is required');
       }
 
-      const intents = await this.listClientIntentsUseCase.execute(clientId);
+      const intents = await this.listTenantIntentsUseCase.execute(tenantId);
 
       const responseData: ListIntentsResponseDTO = {
         items: intents.map((intent) => this.mapIntentToResponseDTO(intent, true)),
@@ -165,31 +165,31 @@ export class IntentController {
     }
   }
 
-  async linkIntentToClient(req: Request, res: Response): Promise<void> {
+  async linkIntentToTenant(req: Request, res: Response): Promise<void> {
     try {
       if (!req.params.id) {
         throw AppError.badRequest('Intent id is required');
       }
 
       const dto = this.validateLinkIntentDTO(req.body);
-      await this.linkIntentToClientUseCase.execute(req.params.id, dto.clientId);
+      await this.linkIntentToTenantUseCase.execute(req.params.id, dto.tenantId);
 
-      res.status(200).json(successResponse({ message: 'Intent linked to client successfully' }));
+      res.status(200).json(successResponse({ message: 'Intent linked to tenant successfully' }));
     } catch (error) {
       this.handleError(error, res);
     }
   }
 
-  async excludeIntentFromClient(req: Request, res: Response): Promise<void> {
+  async excludeIntentFromTenant(req: Request, res: Response): Promise<void> {
     try {
       if (!req.params.id) {
         throw AppError.badRequest('Intent id is required');
       }
 
       const dto = this.validateExcludeIntentDTO(req.body);
-      await this.excludeIntentFromClientUseCase.execute(req.params.id, dto.clientId);
+      await this.excludeIntentFromTenantUseCase.execute(req.params.id, dto.tenantId);
 
-      res.status(200).json(successResponse({ message: 'Intent excluded from client successfully' }));
+      res.status(200).json(successResponse({ message: 'Intent excluded from tenant successfully' }));
     } catch (error) {
       this.handleError(error, res);
     }
@@ -248,15 +248,15 @@ export class IntentController {
     };
   }
 
-  private validateCreateClientIntentDTO(body: unknown): CreateClientIntentDTO {
+  private validateCreateTenantIntentDTO(body: unknown): CreateTenantIntentDTO {
     if (!body || typeof body !== 'object') {
       throw AppError.badRequest('Request body is required');
     }
 
-    const dto = body as Partial<CreateClientIntentDTO>;
+    const dto = body as Partial<CreateTenantIntentDTO>;
 
-    if (!dto.clientId || typeof dto.clientId !== 'string' || dto.clientId.trim().length === 0) {
-      throw AppError.badRequest('clientId is required and must be a non-empty string');
+    if (!dto.tenantId || typeof dto.tenantId !== 'string' || dto.tenantId.trim().length === 0) {
+      throw AppError.badRequest('tenantId is required and must be a non-empty string');
     }
 
     if (!dto.label || typeof dto.label !== 'string' || dto.label.trim().length === 0) {
@@ -283,7 +283,7 @@ export class IntentController {
     const examplePhrases = this.validateStringArray(dto.examplePhrases, 'examplePhrases');
 
     return {
-      clientId: dto.clientId.trim(),
+      tenantId: dto.tenantId.trim(),
       label: dto.label.trim(),
       description: dto.description || '',
       status: dto.status as IntentStatus,
@@ -357,12 +357,12 @@ export class IntentController {
 
     const dto = body as Partial<LinkIntentDTO>;
 
-    if (!dto.clientId || typeof dto.clientId !== 'string' || dto.clientId.trim().length === 0) {
-      throw AppError.badRequest('clientId is required and must be a non-empty string');
+    if (!dto.tenantId || typeof dto.tenantId !== 'string' || dto.tenantId.trim().length === 0) {
+      throw AppError.badRequest('tenantId is required and must be a non-empty string');
     }
 
     return {
-      clientId: dto.clientId.trim(),
+      tenantId: dto.tenantId.trim(),
       intentId: '', // Não usado, mas necessário para o tipo
     };
   }
@@ -374,12 +374,12 @@ export class IntentController {
 
     const dto = body as Partial<ExcludeIntentDTO>;
 
-    if (!dto.clientId || typeof dto.clientId !== 'string' || dto.clientId.trim().length === 0) {
-      throw AppError.badRequest('clientId is required and must be a non-empty string');
+    if (!dto.tenantId || typeof dto.tenantId !== 'string' || dto.tenantId.trim().length === 0) {
+      throw AppError.badRequest('tenantId is required and must be a non-empty string');
     }
 
     return {
-      clientId: dto.clientId.trim(),
+      tenantId: dto.tenantId.trim(),
       intentId: '', // Não usado, mas necessário para o tipo
     };
   }

@@ -20,8 +20,8 @@ router.post('/default', (req: Request, res: Response) =>
   intentController.createDefaultIntent(req, res)
 );
 
-router.post('/client', (req: Request, res: Response) =>
-  intentController.createClientIntent(req, res)
+router.post('/tenant', (req: Request, res: Response) =>
+  intentController.createTenantIntent(req, res)
 );
 
 // Rotas de listagem
@@ -31,15 +31,15 @@ router.get('/default', (req: Request, res: Response) =>
 
 router.get('/all', (req: Request, res: Response) => intentController.listAllIntents(req, res));
 
-router.get('/', (req: Request, res: Response) => intentController.listClientIntents(req, res));
+router.get('/', (req: Request, res: Response) => intentController.listTenantIntents(req, res));
 
 // Rotas de relacionamento
 router.post('/:id/link', (req: Request, res: Response) =>
-  intentController.linkIntentToClient(req, res)
+  intentController.linkIntentToTenant(req, res)
 );
 
 router.post('/:id/exclude', (req: Request, res: Response) =>
-  intentController.excludeIntentFromClient(req, res)
+  intentController.excludeIntentFromTenant(req, res)
 );
 
 // Rotas CRUD básico

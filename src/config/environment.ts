@@ -10,14 +10,13 @@ dotenv.config();
 export const config = {
   // Server
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '3001', 10),
+  port: parseInt(process.env.PORT || '3010', 10),
   
   // CORS
   corsOrigin: process.env.CORS_ORIGIN || '*',
   
   // API
   apiPrefix: process.env.API_PREFIX || '/api',
-  apiVersion: process.env.API_VERSION || 'v1',
   
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
@@ -39,6 +38,11 @@ export const config = {
   database: {
     url: process.env.DATABASE_URL,
     path: process.env.DATABASE_PATH,
+  },
+  
+  // External Services
+  tenantService: {
+    url: process.env.TENANT_SERVICE_URL || 'http://localhost:3001/api/tenant',
   },
 } as const;
 

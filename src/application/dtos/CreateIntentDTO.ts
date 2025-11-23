@@ -13,8 +13,8 @@ export interface CreateDefaultIntentDTO {
   examplePhrases?: string[];
 }
 
-export interface CreateClientIntentDTO {
-  clientId: string;
+export interface CreateTenantIntentDTO {
+  tenantId: string;
   label: string;
   description: string;
   status: IntentStatus;

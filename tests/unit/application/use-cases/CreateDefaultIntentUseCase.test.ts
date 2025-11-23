@@ -46,7 +46,7 @@ describe('CreateDefaultIntentUseCase', () => {
 
     repository.findByLabel.mockResolvedValue(null);
 
-    const mockIntent = Intent.create(
+    const mockIntent = Intent.createForCreation(
       'intent-id',
       dto.label,
       dto.description,
@@ -77,7 +77,7 @@ describe('CreateDefaultIntentUseCase', () => {
 
     repository.findByLabel.mockResolvedValue(null);
 
-    const mockIntent = Intent.create('intent-id', dto.label, dto.description, dto.status, [], [], true);
+    const mockIntent = Intent.createForCreation('intent-id', dto.label, dto.description, dto.status, [], [], true);
     repository.create.mockResolvedValue(mockIntent);
 
     const result = await useCase.execute(dto);
@@ -93,7 +93,7 @@ describe('CreateDefaultIntentUseCase', () => {
       status: IntentStatus.ACTIVE,
     };
 
-    const existingIntent = Intent.create('existing-id', dto.label, 'Existing description', IntentStatus.ACTIVE, [], [], true);
+    const existingIntent = Intent.createForCreation('existing-id', dto.label, 'Existing description', IntentStatus.ACTIVE, [], [], true);
     repository.findByLabel.mockResolvedValue(existingIntent);
 
     await expect(useCase.execute(dto)).rejects.toThrow(AppError);

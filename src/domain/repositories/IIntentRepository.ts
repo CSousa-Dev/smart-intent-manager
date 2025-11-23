@@ -4,7 +4,7 @@
  */
 
 import { Intent } from '../entities/Intent';
-import { ClientId } from '../value-objects/ClientId';
+import { TenantId } from '../value-objects/TenantId';
 
 export interface IIntentRepository {
   // CRUD básico
@@ -16,20 +16,20 @@ export interface IIntentRepository {
   update(intent: Intent): Promise<Intent>;
   delete(id: string): Promise<void>;
 
-  // Relacionamentos com clientes
-  linkIntentToClient(intentId: string, clientId: ClientId): Promise<void>;
-  unlinkIntentFromClient(intentId: string, clientId: ClientId): Promise<void>;
-  excludeIntentFromClient(intentId: string, clientId: ClientId): Promise<void>;
-  removeExclusion(intentId: string, clientId: ClientId): Promise<void>;
+  // Relacionamentos com tenants
+  linkIntentToTenant(intentId: string, tenantId: TenantId): Promise<void>;
+  unlinkIntentFromTenant(intentId: string, tenantId: TenantId): Promise<void>;
+  excludeIntentFromTenant(intentId: string, tenantId: TenantId): Promise<void>;
+  removeExclusion(intentId: string, tenantId: TenantId): Promise<void>;
   
-  // Buscar intents de um cliente
-  findIntentsByClient(clientId: ClientId): Promise<Intent[]>;
+  // Buscar intents de um tenant
+  findIntentsByTenant(tenantId: TenantId): Promise<Intent[]>;
   
   // Verificar relacionamentos
-  isIntentLinkedToClient(intentId: string, clientId: ClientId): Promise<boolean>;
-  isIntentExcludedFromClient(intentId: string, clientId: ClientId): Promise<boolean>;
+  isIntentLinkedToTenant(intentId: string, tenantId: TenantId): Promise<boolean>;
+  isIntentExcludedFromTenant(intentId: string, tenantId: TenantId): Promise<boolean>;
   
-  // Buscar IDs vinculados/excluídos para um cliente
-  getLinkedIntentIds(clientId: ClientId): Promise<Set<string>>;
-  getExcludedIntentIds(clientId: ClientId): Promise<Set<string>>;
+  // Buscar IDs vinculados/excluídos para um tenant
+  getLinkedIntentIds(tenantId: TenantId): Promise<Set<string>>;
+  getExcludedIntentIds(tenantId: TenantId): Promise<Set<string>>;
 }

@@ -5,15 +5,15 @@
 
 import { IIntentRepository } from '../../domain/repositories/IIntentRepository';
 import { Intent } from '../../domain/entities/Intent';
-import { IntentStatus } from '../../domain/value-objects/IntentStatus';
 import { UpdateIntentDTO } from '../dtos/UpdateIntentDTO';
 import { AppError } from '../../shared/utils/AppError';
-import { IntentValidator } from '../../domain/services/IntentValidator';
+import { IntentUniquenessService } from '../../domain/services/IntentUniquenessService';
 
 export class UpdateIntentUseCase {
   constructor(private readonly repository: IIntentRepository) {}
 
   async execute(id: string, dto: UpdateIntentDTO): Promise<Intent> {
+    // Validação de aplicação
     if (!id || id.trim().length === 0) {
       throw AppError.badRequest('Intent id is required');
     }
@@ -25,40 +25,30 @@ export class UpdateIntentUseCase {
       throw AppError.notFound(`Intent with id ${id} not found`);
     }
 
-    // Valida status se fornecido
-    if (dto.status !== undefined) {
-      IntentValidator.validateStatus(dto.status);
-    }
-
-    // Se está atualizando o label, verifica unicidade
+    // Regra de negócio: Se está atualizando o label, verifica unicidade
     if (dto.label !== undefined && dto.label !== existingIntent.label) {
-      IntentValidator.validateLabel(dto.label);
-
-      const existingWithLabel = await this.repository.findByLabel(dto.label.trim());
-
-      if (existingWithLabel && existingWithLabel.id !== id) {
-        throw AppError.conflict(`Intent with label "${dto.label}" already exists`);
+      try {
+        await IntentUniquenessService.ensureLabelIsUniqueForUpdate(
+          this.repository,
+          dto.label,
+          id
+        );
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('already exists')) {
+          throw AppError.conflict(error.message);
+        }
+        throw error;
       }
     }
 
-    // Valida arrays se fornecidos
-    const synonyms =
-      dto.synonyms !== undefined
-        ? IntentValidator.validateSynonyms(dto.synonyms)
-        : existingIntent.synonyms;
-
-    const examplePhrases =
-      dto.examplePhrases !== undefined
-        ? IntentValidator.validateExamplePhrases(dto.examplePhrases)
-        : existingIntent.examplePhrases;
-
     // Atualiza a intenção
+    // A entidade garante sua própria integridade através de validações internas
     const updatedIntent = existingIntent.update(
       dto.label !== undefined ? dto.label : existingIntent.label,
       dto.description !== undefined ? dto.description : existingIntent.description,
       dto.status !== undefined ? dto.status : existingIntent.status,
-      synonyms,
-      examplePhrases
+      dto.synonyms,
+      dto.examplePhrases
     );
 
     return await this.repository.update(updatedIntent);

@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modular architecture structure ready for module development
 - Graceful shutdown handling
 
-### Intent Manager Module (V1)
+### Intent Manager Module
 
 #### Domain Layer
 - Intent entity with create/reconstitute/update methods
@@ -94,5 +94,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Code Quality: ESLint + Prettier
 - Type Safety: TypeScript with strict mode
 - Validation: Manual TypeScript validation (no Zod)
-- Default Port: 3001
+- Default Port: 3010
 

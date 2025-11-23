@@ -6,11 +6,35 @@ import request from 'supertest';
 import { app } from '../../src/app';
 import { getDatabase } from '../../src/infrastructure/database/DatabaseConnection';
 import Database from 'better-sqlite3';
+import { TenantApiService } from '../../src/infrastructure/services/TenantApiService';
+import { TenantId } from '../../src/domain/value-objects/TenantId';
+import { Tenant } from '../../src/domain/entities/Tenant';
+
+// Mock do TenantApiService para os testes
+jest.mock('../../src/infrastructure/services/TenantApiService', () => {
+  return {
+    TenantApiService: jest.fn().mockImplementation(() => {
+      return {
+        findById: jest.fn().mockImplementation(async (id: TenantId) => {
+          // Simula que tenant-001 existe
+          if (id.getValue() === 'tenant-001') {
+            return Tenant.reconstitute('tenant-001', 'Tenant 001');
+          }
+          return null;
+        }),
+        exists: jest.fn().mockImplementation(async (id: TenantId) => {
+          // Simula que tenant-001 existe
+          return id.getValue() === 'tenant-001';
+        }),
+      };
+    }),
+  };
+});
 
 describe('Intents API Integration Tests', () => {
   let db: Database.Database;
   let createdDefaultIntentId: string;
-  let createdClientIntentId: string;
+  let createdTenantIntentId: string;
 
   beforeAll(() => {
     db = getDatabase();
@@ -22,8 +46,8 @@ describe('Intents API Integration Tests', () => {
 
   beforeEach(() => {
     // Limpa as tabelas antes de cada teste
-    db.exec('DELETE FROM client_intent_exclusions');
-    db.exec('DELETE FROM client_intents');
+    db.exec('DELETE FROM tenant_intent_exclusions');
+    db.exec('DELETE FROM tenant_intents');
     db.exec('DELETE FROM intents');
   });
 
@@ -106,28 +130,42 @@ describe('Intents API Integration Tests', () => {
     });
   });
 
-  describe('POST /api/intent/client', () => {
-    it('should create a client intent successfully', async () => {
+  describe('POST /api/intent/tenant', () => {
+    it('should create a tenant intent successfully', async () => {
       const response = await request(app)
-        .post('/api/intent/client')
+        .post('/api/intent/tenant')
         .send({
-          clientId: 'client-001',
-          label: 'client-greeting',
-          description: 'Client greeting intent',
+          tenantId: 'tenant-001',
+          label: 'tenant-greeting',
+          description: 'Tenant greeting intent',
           status: 'ACTIVE',
         })
         .expect(201);
 
       expect(response.body.success).toBe(true);
       expect(response.body.data.id).toBeDefined();
-      expect(response.body.data.label).toBe('client-greeting');
+      expect(response.body.data.label).toBe('tenant-greeting');
       expect(response.body.data.isDefault).toBe(false);
 
-      createdClientIntentId = response.body.data.id;
+      createdTenantIntentId = response.body.data.id;
+    });
+
+    it('should return error when tenant does not exist', async () => {
+      const response = await request(app)
+        .post('/api/intent/tenant')
+        .send({
+          tenantId: 'non-existent-tenant',
+          label: 'greeting',
+          description: 'Description',
+          status: 'ACTIVE',
+        })
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
     });
   });
 
-  describe('GET /api/intent?clientId=X', () => {
+  describe('GET /api/intent?tenantId=X', () => {
     beforeEach(async () => {
       // Cria intenção default
       await request(app)
@@ -138,20 +176,20 @@ describe('Intents API Integration Tests', () => {
           status: 'ACTIVE',
         });
 
-      // Cria intenção específica de cliente
+      // Cria intenção específica de tenant
       await request(app)
-        .post('/api/intent/client')
+        .post('/api/intent/tenant')
         .send({
-          clientId: 'client-001',
-          label: 'client-greeting',
-          description: 'Client greeting',
+          tenantId: 'tenant-001',
+          label: 'tenant-greeting',
+          description: 'Tenant greeting',
           status: 'ACTIVE',
         });
     });
 
-    it('should list intents for a client', async () => {
+    it('should list intents for a tenant', async () => {
       const response = await request(app)
-        .get('/api/intent?clientId=client-001')
+        .get('/api/intent?tenantId=tenant-001')
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -173,9 +211,9 @@ describe('Intents API Integration Tests', () => {
         });
 
       await request(app)
-        .post('/api/intent/client')
+        .post('/api/intent/tenant')
         .send({
-          clientId: 'client-001',
+          tenantId: 'tenant-001',
           label: 'greeting-2',
           description: 'Greeting 2',
           status: 'SUGGESTED',
@@ -308,11 +346,11 @@ describe('Intents API Integration Tests', () => {
       createdDefaultIntentId = response.body.data.id;
     });
 
-    it('should link intent to client', async () => {
+    it('should link intent to tenant', async () => {
       const response = await request(app)
         .post(`/api/intent/${createdDefaultIntentId}/link`)
         .send({
-          clientId: 'client-001',
+          tenantId: 'tenant-001',
         })
         .expect(200);
 
@@ -333,11 +371,11 @@ describe('Intents API Integration Tests', () => {
       createdDefaultIntentId = response.body.data.id;
     });
 
-    it('should exclude intent from client', async () => {
+    it('should exclude intent from tenant', async () => {
       const response = await request(app)
         .post(`/api/intent/${createdDefaultIntentId}/exclude`)
         .send({
-          clientId: 'client-001',
+          tenantId: 'tenant-001',
         })
         .expect(200);
 

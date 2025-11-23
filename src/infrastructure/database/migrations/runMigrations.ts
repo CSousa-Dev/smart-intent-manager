@@ -16,6 +16,8 @@ export function runMigrations(): void {
   try {
     // Drop old tables if they exist (for migration from old schema)
     try {
+      db.exec('DROP TABLE IF EXISTS tenant_intent_exclusions');
+      db.exec('DROP TABLE IF EXISTS tenant_intents');
       db.exec('DROP TABLE IF EXISTS client_intent_exclusions');
       db.exec('DROP TABLE IF EXISTS client_intents');
       db.exec('DROP TABLE IF EXISTS intents');
@@ -55,22 +57,22 @@ export function runMigrations(): void {
         );
 
         -- Tabela de relacionamento many-to-many
-        CREATE TABLE IF NOT EXISTS client_intents (
+        CREATE TABLE IF NOT EXISTS tenant_intents (
           id TEXT PRIMARY KEY,
-          client_id TEXT NOT NULL,
+          tenant_id TEXT NOT NULL,
           intent_id TEXT NOT NULL,
           created_at TEXT NOT NULL,
-          UNIQUE(client_id, intent_id),
+          UNIQUE(tenant_id, intent_id),
           FOREIGN KEY (intent_id) REFERENCES intents(id) ON DELETE CASCADE
         );
 
         -- Tabela de exclusões
-        CREATE TABLE IF NOT EXISTS client_intent_exclusions (
+        CREATE TABLE IF NOT EXISTS tenant_intent_exclusions (
           id TEXT PRIMARY KEY,
-          client_id TEXT NOT NULL,
+          tenant_id TEXT NOT NULL,
           intent_id TEXT NOT NULL,
           created_at TEXT NOT NULL,
-          UNIQUE(client_id, intent_id),
+          UNIQUE(tenant_id, intent_id),
           FOREIGN KEY (intent_id) REFERENCES intents(id) ON DELETE CASCADE
         );
 
@@ -78,10 +80,10 @@ export function runMigrations(): void {
         CREATE INDEX IF NOT EXISTS idx_intents_status ON intents(status);
         CREATE INDEX IF NOT EXISTS idx_intents_is_default ON intents(is_default);
         CREATE INDEX IF NOT EXISTS idx_intents_label ON intents(label);
-        CREATE INDEX IF NOT EXISTS idx_client_intents_client_id ON client_intents(client_id);
-        CREATE INDEX IF NOT EXISTS idx_client_intents_intent_id ON client_intents(intent_id);
-        CREATE INDEX IF NOT EXISTS idx_exclusions_client_id ON client_intent_exclusions(client_id);
-        CREATE INDEX IF NOT EXISTS idx_exclusions_intent_id ON client_intent_exclusions(intent_id);
+        CREATE INDEX IF NOT EXISTS idx_tenant_intents_tenant_id ON tenant_intents(tenant_id);
+        CREATE INDEX IF NOT EXISTS idx_tenant_intents_intent_id ON tenant_intents(intent_id);
+        CREATE INDEX IF NOT EXISTS idx_exclusions_tenant_id ON tenant_intent_exclusions(tenant_id);
+        CREATE INDEX IF NOT EXISTS idx_exclusions_intent_id ON tenant_intent_exclusions(intent_id);
       `;
 
       db.exec(migrationSQL);
